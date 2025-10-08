@@ -451,15 +451,18 @@ function setup() {
   // our purposes we don't need them. Each octave is inserted
   // into a <div> of class "octave".
 
+/*
   // 4-a oktavo
   notoj(4).forEach(([noto,frekv]) => {
     if (noto.length === 1) {
       keyboard.appendChild(createKey(noto, 4, frekv));
     }
   });
+*/
 
-  const c5 = notoj(5)[0];
-  keyboard.appendChild(createKey(c5[0], 5, c5[1]));
+  const f5 = notoj(5)[5];
+  keyboard.appendChild(createKey(f5[0], 5, f5[1]));
+
 
 /*
   noteFreq.forEach((keys, idx) => {
@@ -512,14 +515,14 @@ function magnitudoj() {
     return 0;
   }
 
+  const cnv = canvas["magn"];
+  const ctx = ctxMagn;
+
   // mendu la sekvan desegnon de la diagramo
   requestAnimationFrame(() => magnitudoj());
   let offset = 0;
 
   analyser.getByteFrequencyData(dataArray);
-
-  const cnv = canvas["magn"];
-  const ctx = ctxMagn;
 
   ctx.fillStyle = "rgb(200 200 200)";
   ctx.fillRect(0, 0, cnv.width, cnv.height);
@@ -532,8 +535,8 @@ function magnitudoj() {
   const sliceWidth = (cnv.width * 1.0) / bufferLength;
   let x = 0;
 
-  for (let i = offset; i < bufferLength+offset; i++) {
-  //for (let i = offset; i < bufferLength; i++) {
+  //for (let i = offset; i < bufferLength+offset; i++) {
+  for (let i = 0; i < bufferLength; i++) {
     const v = dataArray[i] / 128.0;
     const y = (v * cnv.height) / 2;
 
@@ -546,7 +549,61 @@ function magnitudoj() {
   ctx.stroke();
 }
 
+function akvofalo() {
+  requestAnimationFrame(() => akvofalo());
+
+  const cnv = canvas["falo"];
+  const ctx = ctxFalo;
+  const lineHeight = 2;
+
+  function getColor(value) {
+      // 1. Normalize the 0-255 value to a Hue (0-360) for a full rainbow
+      // We use a range, for instance, 240 (blue) to 0 (red) for a nice spectrum.
+      // To get a full spectrum, map 0-255 to 0-360: (value / 255) * 360
+      const hue = 180 + Math.round((value / 128.0) * 360);
+
+      // 2. Return the HSL color string (using 50% saturation and 50% lightness for vibrant colors)
+      return `hsl(${hue}, 100%,50%)`;
+  }  
+
+  // ŝovu ĉion malsupren
+  ctx.drawImage(
+      cnv, // Source: The cnv itself
+      0, 0, // Source X, Y (Start at the top-left)
+      cnv.width, cnv.height - lineHeight, // Source Width, Height (Exclude the bottom strip that will move off-screen)
+      0, lineHeight, // Destination X, Y (Draw it starting 'lineHeight' pixels from the top)
+      cnv.width, cnv.height - lineHeight // Destination Width, Height
+  );
+
+  ctx.fillStyle = "rgb(0 0 20)";
+  ctx.fillRect(0, 0, cnv.width, lineHeight);
+
+////
+
+  const sliceWidth = (cnv.width * 1.0) / bufferLength;
+  let x = 0;
+
+  for (let i = 0; i < bufferLength; i++) {
+    //const v = dataArray[i] / 128.0;
+    const color = getColor(dataArray[i]);
+
+      ctx.beginPath();
+      // Use the color for the fill style
+      ctx.fillStyle = color;
+
+      // Draw the dot (a circle)
+      ctx.fillRect(
+          i, 
+          0, 
+          sliceWidth,
+          sliceWidth 
+      );
+      ctx.closePath();
+  }
+}
+
 magnitudoj();
+akvofalo();
 
 function createKey(note, octave, freq) {
   const keyElement = document.createElement("div");
