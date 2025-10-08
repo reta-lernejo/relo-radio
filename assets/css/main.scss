@@ -1,0 +1,70 @@
+---
+---
+/* customizing did not work as explained in https://github.com/jekyll/minima
+  maybe documentation is newer than the used version? */
+@import "{{ site.theme }}";
+body {
+  background: AliceBlue;
+}
+
+.site-header {
+  border-bottom: 1px solid gray;
+  color: black
+}
+.site-footer {
+  border-top: 1px solid gray;
+}
+
+.sekcio {
+  /* border-top: 2px solid cornflowerblue;*/
+}
+
+.sekcio[open] {
+  margin-bottom: .7em;
+}
+
+A[onclick], .ref {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+H2.fontlisto {
+  font-size: 18px;
+  /*text-decoration: underline;*/
+  font-style: italic;
+  margin-bottom: 0.2em;
+  border-top: 1px solid black;
+}
+
+summary {
+  font-size: 120%;
+  background-color: lightblue;
+  padding: .2em;
+  margin-bottom: .2em;
+  border-top: 3px solid cornflowerblue;
+  border-radius: .1em;
+  /*
+  border-bottom-left-radius: .1em;
+  border-bottom-right-radius: .1em;
+  */
+}
+
+.sekva_folio {
+  float: right;
+  border-top-left-radius: .5em;
+  border-bottom-left-radius: .5em;
+  /*background-color: lightblue;*/
+  padding: .3em .5em;
+  border-top: 2px dotted cornflowerblue;
+  border-bottom: 2px dotted cornflowerblue;
+  border-left: 2px dotted cornflowerblue;
+}
+.sekva_folio::after {
+  content: " ➤";
+}
+
+.fontoj {
+  font-size: 24px !important;
+  text-decoration: underline;
+  font-style: italic;
+}
