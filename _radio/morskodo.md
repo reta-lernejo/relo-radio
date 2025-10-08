@@ -404,6 +404,8 @@ function sendu_kodojn(kodoj) {
   });
 }
 
+let stop=0; // signo sendita se tri-foje 0 trovita (paŭzo inter signo = 3)
+
 function sendu_biton(k,osc) {
   const b = k & masko;
   masko <<= 1;
@@ -411,12 +413,14 @@ function sendu_biton(k,osc) {
   if (b) { //} && !morsaktiva) {
     //morsaktiva = true;
     mainGainNode.gain.value = volumeControl.value;
+    stop = 0;
   } else { //if (!b && morsaktiva) {
     //morsaktiva = false;
     mainGainNode.gain.value = 0;
+    stop += 1;
   }
 
-  if (masko > (0b1 << 20)) {
+  if (stop==3) { //(masko > (0b1 << 20)) {
     console.log("sendita: "+k);
     //osc.stop();
     clearInterval(tempilo);
