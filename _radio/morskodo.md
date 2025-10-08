@@ -58,8 +58,9 @@ https://www.gaussianwaves.com/2015/11/interpreting-fft-results-obtaining-magnitu
 </div>
 
 <!--canvas width="512" height="300" id="osciloskopo"></canvas-->
-<canvas width="512" height="300" id="magnitudoj"></canvas>
-<canvas width="512" height="300" id="akvofalo"></canvas>
+<canvas width="200" height="200" id="magnitudoj"></canvas>
+<br/>
+<canvas width="200" height="600" id="akvofalo"></canvas>
 
 
 <style>
@@ -176,6 +177,9 @@ https://www.gaussianwaves.com/2015/11/interpreting-fft-results-obtaining-magnitu
 
 
 <script>
+
+const morsfrekvenco = 700;
+const audioContext = new AudioContext();
 
   // longoj: punkto = 1, streko = 3, inter literoj = 3, inter vortoj = 7
 
@@ -348,9 +352,80 @@ function bitmasko(signoj) {
   return kodo;
 }
 
+//let morsaktiva = false; // sono jes/ne
+let masko = 0b1; // pozicio en b (masko)
+let tempilo;
+let tempunuo = 100; //ms
+let morsilo;
+
+// enpakas "coroutine" fun
+function coroutine(fun) {
+  let cr = fun(); // perparu fun
+  cr.next(); // rulu ĝis yield
+  return function(x) {
+    cr.next(x);
+  }
+}
+
+function sendu(teksto) {
+  const kodoj = bitmasko(teksto);
+  sendu_kodojn(kodoj);
+}
+
+function sendu_kodojn(kodoj) {
+
+  // preparo de la oscililo
+  const osc = audioContext.createOscillator();
+  osc.connect(mainGainNode);
+
+  const type = wavePicker.options[wavePicker.selectedIndex].value;
+
+  if (type === "custom") {
+    osc.setPeriodicWave(customWaveform);
+  } else {
+    osc.type = type;
+  }
+
+  osc.frequency.value = morsfrekvenco;
+
+  // sendo de la signalo laŭ kodo
+  morsilo = coroutine(function*() {
+    console.log("osc.start");
+    osc.start();
+    for (const k of kodoj) {
+      console.log("sendota: "+k);
+      masko = 0b1;
+      tempilo = setInterval(sendu_biton,tempunuo,k,osc);
+      mainGainNode.gain.value = 0; // mallaŭte
+      yield;
+    };
+    console.log("osc.stop");
+    osc.stop();
+  });
+}
+
+function sendu_biton(k,osc) {
+  const b = k & masko;
+  masko <<= 1;
+
+  if (b) { //} && !morsaktiva) {
+    //morsaktiva = true;
+    mainGainNode.gain.value = volumeControl.value;
+  } else { //if (!b && morsaktiva) {
+    //morsaktiva = false;
+    mainGainNode.gain.value = 0;
+  }
+
+  if (masko > (0b1 << 20)) {
+    console.log("sendita: "+k);
+    //osc.stop();
+    clearInterval(tempilo);
+    // sekva kodero
+    morsilo();
+  }
+}
 
 
-const audioContext = new AudioContext();
 const oscList = [];
 let mainGainNode = null;
 const keyboard = document.querySelector(".keyboard");
@@ -435,7 +510,8 @@ function setup() {
   mainGainNode = audioContext.createGain();
 
   analyser = audioContext.createAnalyser();
-  analyser.fftSize = 512;
+  analyser.fftSize = 128; // 256; // 512;
+  analyser.smoothingTimeConstant = 0.2;
 
   bufferLength = analyser.frequencyBinCount;
   dataArray = new Uint8Array(bufferLength);
@@ -538,7 +614,7 @@ function magnitudoj() {
   //for (let i = offset; i < bufferLength+offset; i++) {
   for (let i = 0; i < bufferLength; i++) {
     const v = dataArray[i] / 128.0;
-    const y = (v * cnv.height) / 2;
+    const y = (v * cnv.height) / 2 - 5;
 
     ctx.lineTo(x, cnv.height-y);
 
@@ -549,56 +625,69 @@ function magnitudoj() {
   ctx.stroke();
 }
 
+let frameCounter = 0;
+const frameRatio = 1; // 1..5.. ( 1 = ĉiufoje, ~60/s)
+
 function akvofalo() {
   requestAnimationFrame(() => akvofalo());
 
-  const cnv = canvas["falo"];
-  const ctx = ctxFalo;
-  const lineHeight = 2;
+  frameCounter++;
 
-  function getColor(value) {
-      // 1. Normalize the 0-255 value to a Hue (0-360) for a full rainbow
-      // We use a range, for instance, 240 (blue) to 0 (red) for a nice spectrum.
-      // To get a full spectrum, map 0-255 to 0-360: (value / 255) * 360
-      const hue = 180 + Math.round((value / 128.0) * 360);
+  if (frameCounter > frameRatio) {
+      
+    analyser.getByteFrequencyData(dataArray);
 
-      // 2. Return the HSL color string (using 50% saturation and 50% lightness for vibrant colors)
-      return `hsl(${hue}, 100%,50%)`;
-  }  
+    const cnv = canvas["falo"];
+    const ctx = ctxFalo;
+    const lineHeight = 1;
 
-  // ŝovu ĉion malsupren
-  ctx.drawImage(
-      cnv, // Source: The cnv itself
-      0, 0, // Source X, Y (Start at the top-left)
-      cnv.width, cnv.height - lineHeight, // Source Width, Height (Exclude the bottom strip that will move off-screen)
-      0, lineHeight, // Destination X, Y (Draw it starting 'lineHeight' pixels from the top)
-      cnv.width, cnv.height - lineHeight // Destination Width, Height
-  );
+    function getColor(value) {
+        // 1. Normalize the 0-255 value to a Hue (0-360) for a full rainbow
+        // We use a range, for instance, 240 (blue) to 0 (red) for a nice spectrum.
+        // To get a full spectrum, map 0-255 to 0-360: (value / 255) * 360
+        const hue = 180 + Math.round((value / 128.0) * 360);
+        const hel = 5 + Math.round((value / 128.0) * 60);
 
-  ctx.fillStyle = "rgb(0 0 20)";
-  ctx.fillRect(0, 0, cnv.width, lineHeight);
+        // 2. Return the HSL color string (using 50% saturation and 50% lightness for vibrant colors)
+        return `hsl(${hue}, 100%, ${hel}%)`;
+    }  
 
-////
+    // ŝovu ĉion malsupren
+    ctx.drawImage(
+        cnv, // Source: The cnv itself
+        0, 0, // Source X, Y (Start at the top-left)
+        cnv.width, cnv.height - lineHeight, // Source Width, Height (Exclude the bottom strip that will move off-screen)
+        0, lineHeight, // Destination X, Y (Draw it starting 'lineHeight' pixels from the top)
+        cnv.width, cnv.height - lineHeight // Destination Width, Height
+    );
 
-  const sliceWidth = (cnv.width * 1.0) / bufferLength;
-  let x = 0;
+    ctx.fillStyle = "rgb(0 0 0)";
+    ctx.fillRect(0, 0, cnv.width, lineHeight);
 
-  for (let i = 0; i < bufferLength; i++) {
-    //const v = dataArray[i] / 128.0;
-    const color = getColor(dataArray[i]);
+  ////
 
-      ctx.beginPath();
-      // Use the color for the fill style
-      ctx.fillStyle = color;
+    const sliceWidth = (cnv.width * 1.0) / bufferLength;
+    let x = 0;
 
-      // Draw the dot (a circle)
-      ctx.fillRect(
-          i, 
-          0, 
-          sliceWidth,
-          sliceWidth 
-      );
-      ctx.closePath();
+    for (let i = 0; i < bufferLength; i++) {
+      //const v = dataArray[i] / 128.0;
+      const color = getColor(dataArray[i]);
+
+        ctx.beginPath();
+        // Use the color for the fill style
+        ctx.fillStyle = color;
+
+        // Draw the dot (a circle)
+        ctx.fillRect(
+            i, 
+            0, 
+            sliceWidth,
+            sliceWidth 
+        );
+        ctx.closePath();
+    }
+
+    frameCounter = 0;
   }
 }
 
