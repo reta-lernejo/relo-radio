@@ -26,6 +26,8 @@ https://www.gaussianwaves.com/2015/11/interpreting-fft-results-obtaining-magnitu
 
 <div class="container">
   <div class="keyboard"></div>
+  <input id="mesagho" type="text">
+  <button id="sendu">Sendu</button>
 </div>
 <div class="settingsBar">
   <div class="left">
@@ -42,18 +44,6 @@ https://www.gaussianwaves.com/2015/11/interpreting-fft-results-obtaining-magnitu
       <option value="0.0" label="Mute"></option>
       <option value="1.0" label="100%"></option>
     </datalist>
-  </div>
-  <div class="right">
-    <span>Ondospeco: </span>
-    <select name="waveform">
-      <option value="custom">Propra</option>
-      <option value="sine">Sinuso</option>
-      <!--
-      <option value="square" selected>Square</option>
-      <option value="sawtooth">Sawtooth</option>
-      <option value="triangle">Triangle</option>
-      -->
-    </select>
   </div>
 </div>
 
@@ -180,6 +170,8 @@ https://www.gaussianwaves.com/2015/11/interpreting-fft-results-obtaining-magnitu
 
 const morsfrekvenco = 700;
 const audioContext = new AudioContext();
+const oscililo = audioContext.createOscillator();
+
 
   // longoj: punkto = 1, streko = 3, inter literoj = 3, inter vortoj = 7
 
@@ -377,15 +369,7 @@ function sendu_kodojn(kodoj) {
   // preparo de la oscililo
   const osc = audioContext.createOscillator();
   osc.connect(mainGainNode);
-
-  const type = wavePicker.options[wavePicker.selectedIndex].value;
-
-  if (type === "custom") {
-    osc.setPeriodicWave(customWaveform);
-  } else {
-    osc.type = type;
-  }
-
+  osc.type = "sine";
   osc.frequency.value = morsfrekvenco;
 
   // sendo de la signalo laŭ kodo
@@ -435,6 +419,8 @@ let mainGainNode = null;
 const keyboard = document.querySelector(".keyboard");
 const wavePicker = document.querySelector("select[name='waveform']");
 const volumeControl = document.querySelector("input[name='volume']");
+const sendo_btn = document.getElementById("sendu");
+
 let customWaveform = null;
 let sineTerms = null;
 let cosineTerms = null;
@@ -509,6 +495,11 @@ function createNoteTable() {
 function setup() {
   //const noteFreq = createNoteTable();
 
+  sendo_btn.addEventListener("click",() => {
+    const mesagho = document.getElementById("mesagho").value;
+    sendu(mesagho);
+  });
+
   volumeControl.addEventListener("change", changeVolume, false);
 
   mainGainNode = audioContext.createGain();
@@ -569,7 +560,7 @@ function setup() {
   //sineTerms = new Float32Array([0, 1,0.5, 0.3, 0.1]);  
   // sineTerms = new Float32Array([0, 1, 0, 0.5, 0, 0.2, 0, 0.1]);
 
-
+/*
   sineTerms = new Float32Array([0, 1.0, 0, 0.4, 0, 0.1, 0, 0.05]);
   cosineTerms = new Float32Array(sineTerms.length); // ĉio 0 - neniu fazo
   //cosineTerms = sineTerms; //
@@ -579,7 +570,7 @@ function setup() {
   for (let i = 0; i < 9; i++) {
     oscList[i] = {};
   }
-
+*/
 }
 
 setup();
@@ -719,47 +710,19 @@ function createKey(note, octave, freq) {
 }
 
 function playTone(freq) {
-  const osc = audioContext.createOscillator();
-  osc.connect(mainGainNode);
-
-  const type = wavePicker.options[wavePicker.selectedIndex].value;
-
-  if (type === "custom") {
-    osc.setPeriodicWave(customWaveform);
-  } else {
-    osc.type = type;
-  }
-
-  osc.frequency.value = freq;
-  osc.start();
-
-  return osc;
+  oscililo.connect(mainGainNode);
+  oscililo.type = "sine";
+  // PLIBONIGU: faru elektebla?
+  oscililo.frequency.value = morsfrekvenco;
+  oscililo.start();
 }
 
 function notePressed(event) {
-  if (event.buttons & 1) {
-    const dataset = event.target.dataset;
-
-    if (!dataset["pressed"] && dataset["octave"]) {
-      const octave = Number(dataset["octave"]);
-      oscList[octave][dataset["note"]] = playTone(dataset["frequency"]);
-      dataset["pressed"] = "yes";
-    }
-  }
+  playTone(morsfrekvenco);
 }
 
 function noteReleased(event) {
-  const dataset = event.target.dataset;
-
-  if (dataset && dataset["pressed"]) {
-    const octave = Number(dataset["octave"]);
-
-    if (oscList[octave] && oscList[octave][dataset["note"]]) {
-      oscList[octave][dataset["note"]].stop();
-      delete oscList[octave][dataset["note"]];
-      delete dataset["pressed"];
-    }
-  }
+  oscililo.stop();
 }
 
 function changeVolume(event) {
