@@ -168,9 +168,23 @@ https://www.gaussianwaves.com/2015/11/interpreting-fft-results-obtaining-magnitu
 
 <script>
 
+
+// vd https://x.st/javascript-coroutines/
+function coroutine(fun) {
+  let cr = fun(); // perparu fun
+  cr.next(); // rulu ĝis yield
+  return function(x) {
+    cr.next(x);
+  }
+}
+
 const morsfrekvenco = 700;
 const audioContext = new AudioContext();
-const oscililo = audioContext.createOscillator();
+let oscililo;
+
+
+
+ 
 
 
   // longoj: punkto = 1, streko = 3, inter literoj = 3, inter vortoj = 7
@@ -350,14 +364,6 @@ let tempilo;
 let tempunuo = 100; //ms
 let morsilo;
 
-// enpakas "coroutine" fun
-function coroutine(fun) {
-  let cr = fun(); // perparu fun
-  cr.next(); // rulu ĝis yield
-  return function(x) {
-    cr.next(x);
-  }
-}
 
 function sendu(teksto) {
   const kodoj = bitmasko(teksto);
@@ -366,31 +372,27 @@ function sendu(teksto) {
 
 function sendu_kodojn(kodoj) {
 
-  // preparo de la oscililo
-  const osc = audioContext.createOscillator();
-  osc.connect(mainGainNode);
-  osc.type = "sine";
-  osc.frequency.value = morsfrekvenco;
-
   // sendo de la signalo laŭ kodo
   morsilo = coroutine(function*() {
-    console.log("osc.start");
-    osc.start();
+    // start
+    oscililo();
+
     for (const k of kodoj) {
       console.log("sendota: "+k);
       masko = 0b1;
-      tempilo = setInterval(sendu_biton,tempunuo,k,osc);
+      tempilo = setInterval(sendu_biton,tempunuo,k);
       mainGainNode.gain.value = 0; // mallaŭte
       yield;
     };
-    console.log("osc.stop");
-    osc.stop();
+    
+    // stop
+    oscililo();
   });
 }
 
 let stop=0; // signo sendita se tri-foje 0 trovita (paŭzo inter signo = 3)
 
-function sendu_biton(k,osc) {
+function sendu_biton(k) {
   const b = k & masko;
   masko <<= 1;
 
@@ -518,19 +520,26 @@ function setup() {
 
   mainGainNode.gain.value = volumeControl.value;
 
-  // Create the keys; skip any that are sharp or flat; for
-  // our purposes we don't need them. Each octave is inserted
-  // into a <div> of class "octave".
-
-/*
-  // 4-a oktavo
-  notoj(4).forEach(([noto,frekv]) => {
-    if (noto.length === 1) {
-      keyboard.appendChild(createKey(noto, 4, frekv));
+  oscililo = coroutine(function*() {
+    // OscillatorNode malpermesas dufoje voki start(),
+    // sen stop(), sed ĝi ankaŭ ne malkaŝas en kiu stato ĝi estas
+    // per tiu "coroutine", ni certigas, ke ni ĉiam ŝaltas al la alia stato
+    while (true) {
+      yield;
+      // preparo de la oscililo
+      const osc = audioContext.createOscillator();
+      osc.connect(mainGainNode);
+      osc.type = "sine";
+      osc.frequency.value = morsfrekvenco;
+      console.log("osc.start");
+      osc.start();
+      yield;
+      console.log("osc.stop");
+      osc.stop();
     }
   });
-*/
 
+  // klavo
   const f5 = notoj(5)[5];
   keyboard.appendChild(createKey(f5[0], 5, f5[1]));
 
@@ -703,8 +712,8 @@ function createKey(note, octave, freq) {
 
   keyElement.addEventListener("mousedown", notePressed, false);
   keyElement.addEventListener("mouseup", noteReleased, false);
-  keyElement.addEventListener("mouseover", notePressed, false);
-  keyElement.addEventListener("mouseleave", noteReleased, false);
+  //keyElement.addEventListener("mouseover", notePressed, false);
+  //keyElement.addEventListener("mouseleave", noteReleased, false);
 
   return keyElement;
 }
@@ -714,7 +723,9 @@ function playTone(freq) {
   oscililo.type = "sine";
   // PLIBONIGU: faru elektebla?
   oscililo.frequency.value = morsfrekvenco;
-  oscililo.start();
+  // start
+  oscililo();
+  //oscililo.start();
 }
 
 function notePressed(event) {
@@ -722,7 +733,9 @@ function notePressed(event) {
 }
 
 function noteReleased(event) {
-  oscililo.stop();
+    // stop
+  //oscililo.stop();
+  oscililo();
 }
 
 function changeVolume(event) {
